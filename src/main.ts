@@ -1,3 +1,7 @@
+import fs from "fs"
+import { graphviz } from "node-graphviz"
+
+
 enum OPERATOR {
     SUM,// SOMA
     SUB,// SUBTRACAO
@@ -105,6 +109,22 @@ function linearStringToTree(str: string): TreeNode {
     }
     return queue.shift() 
 }
+
+// Define a graph using DOT notation
+const graph = `
+    digraph {
+        a -> b;
+        b -> c;
+        c -> d;
+        d -> a;
+    }
+`;
+
+// Compile the graph to SVG using the `circo` layout algorithm
+graphviz.circo(graph, 'svg').then((svg) => {
+  // Write the SVG to file
+  fs.writeFileSync('graph.svg', svg);
+});
 
 function main() {
     let x = 'MEM(+(CONST 1,CONST 2))'

@@ -19,5 +19,8 @@
     "ts-node": "^10.9.2",
     "tsc": "^2.0.4",
     "typescript-eslint": "^8.0.1"
+  },
+  "dependencies": {
+    "node-graphviz": "^0.1.1"
   }
 }
