@@ -49,10 +49,18 @@ function splitLinearString(str: string) : string[] {
         }
     }
 
+    console.log(ret)
+
     return ret
 }
 
 function linearStringToTree(str: string): TreeNode {
+    if(!str.startsWith("(")) {
+        str = "(" + str
+    }
+    if(!str.endsWith("(")) {
+        str = str + ")"
+    }
     const tokens = splitLinearString(str);
     const stack : string[] = []
     const queue : TreeNode[] = []
@@ -61,8 +69,6 @@ function linearStringToTree(str: string): TreeNode {
         childLeft: null,
         childRight: null
     }
-
-    console.log(tokens)
 
     for(const token of tokens) {
         if(operatorsMap.has(token) && operatorsMap.get(token) === OPERATOR.CPP) {
@@ -85,18 +91,23 @@ function linearStringToTree(str: string): TreeNode {
                     })
                 }
             }
-            stack.pop()
+            if(stack.length !== 0) {
+                stack.pop()
+            } else {
+                throw new Error(`ERROR :: linearStringToTree :: Malformed Formula -> ${str}`);
+            }
         } else {
             stack.push(token)
         }
     }
-
-
+    if(stack.length !== 0) {
+        throw new Error(`ERROR :: linearStringToTree :: Malformed Formula -> ${str}`);
+    }
     return queue.shift() 
 }
 
 function main() {
-    let x = '(MEM(+(CONST1,CONST2)))'
+    let x = 'MEM(+(CONST 1,CONST 2))'
 
     console.log(linearStringToTree(x))
 }
