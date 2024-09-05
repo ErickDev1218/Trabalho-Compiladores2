@@ -27,7 +27,7 @@ type TreeNode = {
     root: string
     childLeft?: TreeNode 
     childRight?: TreeNode
-} | null
+}
 
 function splitLinearString(str: string) : string[] {
     const chars : string[] = str.split("")
