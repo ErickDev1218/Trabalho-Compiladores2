@@ -1,0 +1,8 @@
+@baseURL = http://localhost:3000
+
+POST {{baseURL}}/linear-string-to-img/
+Content-Type: application/json
+
+{
+    "linearString": "+(CONST1, CONST2)"
+}
