@@ -1,135 +1,225 @@
-import fs from "fs"
-import { graphviz } from "node-graphviz"
-
+import { graphviz } from "node-graphviz";
+import { Buffer } from "buffer";
 
 enum OPERATOR {
-    SUM,// SOMA
-    SUB,// SUBTRACAO
-    DIV,// DIVISAO
-    MUL,// MULTIPLICACAO
-    MEM,// LOAD
-    MEV, // MOVEM
-    MOV,// STORE
-    OPP,// (
-    CPP // )
+  SUM, // SOMA
+  SUB, // SUBTRACAO
+  DIV, // DIVISAO
+  MUL, // MULTIPLICACAO
+  MEM, // LOAD
+  MEV, // MOVEM
+  MOV, // STORE
+  // OPP, // (
+  // CPP, // )
 }
+type Pattern = {
+  root: OPERATOR,
+  left?: TreeNode,
+  right?: TreeNode
+  operation: string,
+  expression: string
+}
+const i = 1
+const j = 2
+const k = 3
+const pattern: Pattern[] = [
+  {
+    root: OPERATOR.SUM,
+    left: null,
+    right: null,
+    operation: 'ADD',
+    expression: `r${i} <- r${j} + r${k}`
+  },
+  {
+    root: OPERATOR.MUL,
+    left: null,
+    right: null,
+    operation: 'MUL',
+    expression: `r${i} <- r${j} + r${k}`
 
-const operatorsMap: Map<string, OPERATOR> = new Map<string, OPERATOR>([
-    ["+", OPERATOR.SUM],
-    ["-", OPERATOR.SUB],
-    ["/", OPERATOR.DIV],
-    ["*", OPERATOR.MUL],
-    ["MEM", OPERATOR.MEM],
-    ["MOV", OPERATOR.MOV],
-    ["(", OPERATOR.OPP],
-    [")", OPERATOR.CPP]
-])
-
-// Fica subetendido que o que nao é operador é operando.
+  },
+]
+const operatorsMap: Map<string, [OPERATOR, number]> = new Map<string, [OPERATOR, number]>([
+  ["+", [OPERATOR.SUM, 2]],
+  ["-", [OPERATOR.SUB, 2]],
+  ["/", [OPERATOR.DIV, 2]],
+  ["*", [OPERATOR.MUL, 2]],
+  ["MEV", [OPERATOR.MEV, 2]],
+  ["MEM", [OPERATOR.MEM, 1]],
+  ["MOV", [OPERATOR.MOV, 2]],
+  // ["(", [ OPERATOR.OPP, 0]],
+  // [")", [ OPERATOR.CPP, 0]],
+]);
 
 type TreeNode = {
-    root: string
-    childLeft?: TreeNode 
-    childRight?: TreeNode
+  root: string;
+  childLeft?: TreeNode;
+  childRight?: TreeNode;
+};
+
+function splitLinearString(str: string): string[] {
+  const chars: string[] = str.split("");
+  const ret: string[] = [];
+
+  for (let i = 0; i < chars.length; i++) {
+    if (operatorsMap.has(chars[i])) {
+      ret.push(chars[i]);
+    } else {
+      let full_str = "";
+      while (i < chars.length - 1 && ![",", "(", ")"].includes(chars[i + 1])) {
+        if (chars[i] !== ",") {
+          full_str += chars[i];
+        }
+        i++;
+      }
+      if (chars[i] !== ",") {
+        full_str += chars[i];
+      }
+      if (full_str !== "") {
+        ret.push(full_str);
+      }
+    }
+  }
+
+  return ret;
+}
+async function generateGraphInBase64(graph): Promise<string> {
+  return new Promise((resolve, reject) => {
+    graph.output({ type: "svg" }, (imageData) => {
+      if (imageData) {
+        // Convertendo para Base64
+        const base64Image = Buffer.from(imageData).toString("base64");
+        resolve(base64Image);
+      } else {
+        reject("Erro ao gerar o grafo.");
+      }
+    });
+  });
 }
 
-function splitLinearString(str: string) : string[] {
-    const chars : string[] = str.split("")
-    const ret : string[] = [];
+async function ParseTreeToGraphvizB64(tree: TreeNode) {
+  let globalId = 0
+  const stack: TreeNode[] = []
+  const idStack: number[] = []
+  let graphvizStr = `graph {
+node[shape="box"]`
+  stack.push(tree)
+  idStack.push(globalId)
 
-    for(let i = 0; i < chars.length; i++) {
-        if(operatorsMap.has(chars[i])) {
-            ret.push(chars[i]) 
-        } else {
-            let full_str = ""
-            while(i < chars.length-1 && ![",", "(", ")"].includes(chars[i+1])) {
-                if(chars[i] !== ","){
-                    full_str += chars[i]
-                }
-                i++;
-            }
-            full_str += chars[i]
-            ret.push(full_str)
-        }
+  while (stack.length !== 0) {
+    const currNode = stack.pop()
+    const currId = idStack.pop()
+    graphvizStr += `\n${currId}[label="${currNode.root}"]\n`
+
+    if (currNode.childLeft !== null) {
+      globalId++
+      stack.push(currNode.childLeft)
+      idStack.push(globalId);
+      graphvizStr += `${currId}--${globalId}\n`
     }
+    if (currNode.childRight !== null) {
+      globalId++
+      stack.push(currNode.childRight)
+      idStack.push(globalId);
+      graphvizStr += `${currId}--${globalId}\n`
+    }
+  }
 
-    console.log(ret)
+  graphvizStr += "\n}"
 
-    return ret
+  const svg = await graphviz.dot(graphvizStr, 'svg')
+  // Convert the SVG to Base64
+  return Buffer.from(svg).toString('base64');
+}
+
+function seeTree(tree: TreeNode) {
+  if (tree === null) {
+    return
+  }
+  seeTree(tree.childLeft)
+  seeTree(tree.childRight)
+  console.log(tree.root)
+}
+export async function generateLinearStringB64(linearString) {
+  const tree = linearStringToTree(linearString)
+  seeTree(tree)
+  const ret = await ParseTreeToGraphvizB64(tree)
+  return ret;
+}
+
+
+//Testando com recursão
+
+function rec(str: string) {
+  if (str.length === 0) {
+    return null
+  }
+  let _str = ''
+  let i = 0
+  while (!str.includes('(')) {
+    _str = str[i]
+  }
+  _str = _str.substring(0, _str.length - 1)
+  const final: TreeNode = {
+    root: _str,
+    childLeft: rec(_str),
+    childRight: rec(_str) //depois de remover até o proximo )
+  }
 }
 
 function linearStringToTree(str: string): TreeNode {
-    if(!str.startsWith("(")) {
-        str = "(" + str
+  str = str.trim()
+  const root = str.substring(0, str.indexOf("(") === -1 ? str.length : str.indexOf("("))
+  if (!operatorsMap.has(root)) {
+    return {
+      root,
+      childLeft: null,
+      childRight: null
     }
-    if(!str.endsWith("(")) {
-        str = str + ")"
-    }
-    const tokens = splitLinearString(str);
-    const stack : string[] = []
-    const queue : TreeNode[] = []
-    const ret : TreeNode = {
-        root: null,
-        childLeft: null,
-        childRight: null
-    }
+  } else {
+    let flag = false;
+    let counter = 0;
+    let index = 0;
+    let left;
+    let right;
 
-    for(const token of tokens) {
-        if(operatorsMap.has(token) && operatorsMap.get(token) === OPERATOR.CPP) {
-            while(stack.length !== 0 && operatorsMap.get(stack[stack.length-1]) !== OPERATOR.OPP) {
-                const curr = stack.pop()
-                console.log(curr)
-                if(!operatorsMap.has(curr)) {
-                    queue.unshift({
-                        root: curr,
-                        childLeft: null,
-                        childRight: null
-                    })
-                } else {
-                    const left = queue.length >= 1 ? queue.shift() : null;
-                    const right = queue.length >= 1 ? queue.shift() : null;
-                    queue.unshift({
-                        root: curr,
-                        childLeft: left,
-                        childRight: right
-                    })
-                }
-            }
-            if(stack.length !== 0) {
-                stack.pop()
-            } else {
-                throw new Error(`ERROR :: linearStringToTree :: Malformed Formula -> ${str}`);
-            }
-        } else {
-            stack.push(token)
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] === "(") {
+        counter++;
+        if (!flag) {
+          flag = true
         }
+      }
+      if (str[i] === ")") {
+        counter--;
+        if (counter === 1) {
+          index = i;
+          break;
+        }
+      }
     }
-    if(stack.length !== 0) {
-        throw new Error(`ERROR :: linearStringToTree :: Malformed Formula -> ${str}`);
+
+    if (counter === 0) {
+      right = str.substring(str.indexOf("(") + 1, str.length - 1).split(",")[1]
+      left = str.substring(str.indexOf("(") + 1, str.length - 1).split(",")[0]
+    } else {
+      left = (str.substring(str.indexOf("(") + 1, index + 1))
+      let temp = str.substring(index + 1, str.length)
+      right = temp.substring(temp.indexOf(",") + 1, temp.length - 1)
     }
-    return queue.shift() 
+
+    if (operatorsMap.get(root)[1] === 1) {
+      return {
+        root,
+        childLeft: linearStringToTree(right),
+        childRight: null
+      }
+    } else if (operatorsMap.get(root)[1] === 2) {
+      return {
+        root,
+        childLeft: linearStringToTree(left),
+        childRight: linearStringToTree(right)
+      }
+    }
+  }
 }
-
-// Define a graph using DOT notation
-const graph = `
-    digraph {
-        a -> b;
-        b -> c;
-        c -> d;
-        d -> a;
-    }
-`;
-
-// Compile the graph to SVG using the `circo` layout algorithm
-graphviz.circo(graph, 'svg').then((svg) => {
-  // Write the SVG to file
-  fs.writeFileSync('graph.svg', svg);
-});
-
-function main() {
-    let x = 'MEM(+(CONST 1,CONST 2))'
-
-    console.log(linearStringToTree(x))
-}
-
-main()
