@@ -1,4 +1,3 @@
-import fs from "fs";
 import { graphviz } from "node-graphviz";
 import { Buffer } from "buffer";
 
@@ -13,7 +12,33 @@ enum OPERATOR {
   // OPP, // (
   // CPP, // )
 }
+type Pattern = {
+  root: OPERATOR,
+  left?: TreeNode,
+  right?: TreeNode
+  operation: string,
+  expression: string
+}
+const i = 1
+const j = 2
+const k = 3
+const pattern: Pattern[] = [
+  {
+    root: OPERATOR.SUM,
+    left: null,
+    right: null,
+    operation: 'ADD',
+    expression: `r${i} <- r${j} + r${k}`
+  },
+  {
+    root: OPERATOR.MUL,
+    left: null,
+    right: null,
+    operation: 'MUL',
+    expression: `r${i} <- r${j} + r${k}`
 
+  },
+]
 const operatorsMap: Map<string, [OPERATOR, number]> = new Map<string, [OPERATOR, number]>([
   ["+", [OPERATOR.SUM, 2]],
   ["-", [OPERATOR.SUB, 2]],
@@ -58,56 +83,6 @@ function splitLinearString(str: string): string[] {
 
   return ret;
 }
-
-// function linearStringToTree(str: string): TreeNode {
-//   const tokens = splitLinearString(str);
-//   console.log(tokens)
-//   const stack: string[] = [];
-//   const queue: TreeNode[] = [];
-//   const ret: TreeNode = {
-//     root: null,
-//     childLeft: null,
-//     childRight: null,
-//   };
-
-//   for (const token of tokens) {
-//     if (operatorsMap.has(token)) {
-//       if (operatorsMap.get(token) === OPERATOR.CPP) {
-//         while (
-//           stack.length !== 0 &&
-//           operatorsMap.get(stack[stack.length - 1]) !== OPERATOR.OPP
-//         ) {
-//           const op = stack.pop();
-//           const left = queue.length >= 1 ? queue.shift() : null;
-//           const right = queue.length >= 1 && op !== "MEM" ? queue.shift() : null;
-//           queue.unshift({
-//             root: op,
-//             childLeft: left,
-//             childRight: right,
-//           });
-//         }
-//         if (stack.length !== 0) {
-//           stack.pop();
-//         } else {
-//           throw new Error(
-//             `ERROR :: linearStringToTree :: Malformed Formula -> ${str}`
-//           );
-//         }
-//       } else {
-//         stack.push(token)
-//       }
-//     } else {
-//       queue.unshift({
-//         root: token,
-//         childLeft: null,
-//         childRight: null
-//       })
-//     }
-//   } 
-
-//   return queue.shift();
-// }
-
 async function generateGraphInBase64(graph): Promise<string> {
   return new Promise((resolve, reject) => {
     graph.output({ type: "svg" }, (imageData) => {
@@ -136,15 +111,15 @@ node[shape="box"]`
     const currId = idStack.pop()
     graphvizStr += `\n${currId}[label="${currNode.root}"]\n`
 
-    if (currNode.childRight !== null) {
-      globalId++
-      stack.push(currNode.childRight)
-      idStack.push(globalId);
-      graphvizStr += `${currId}--${globalId}\n`
-    }
     if (currNode.childLeft !== null) {
       globalId++
       stack.push(currNode.childLeft)
+      idStack.push(globalId);
+      graphvizStr += `${currId}--${globalId}\n`
+    }
+    if (currNode.childRight !== null) {
+      globalId++
+      stack.push(currNode.childRight)
       idStack.push(globalId);
       graphvizStr += `${currId}--${globalId}\n`
     }
@@ -157,9 +132,17 @@ node[shape="box"]`
   return Buffer.from(svg).toString('base64');
 }
 
+function seeTree(tree: TreeNode) {
+  if (tree === null) {
+    return
+  }
+  seeTree(tree.childLeft)
+  seeTree(tree.childRight)
+  console.log(tree.root)
+}
 export async function generateLinearStringB64(linearString) {
   const tree = linearStringToTree(linearString)
-  console.log(tree)
+  seeTree(tree)
   const ret = await ParseTreeToGraphvizB64(tree)
   return ret;
 }
@@ -187,8 +170,6 @@ function rec(str: string) {
 function linearStringToTree(str: string): TreeNode {
   str = str.trim()
   const root = str.substring(0, str.indexOf("(") === -1 ? str.length : str.indexOf("("))
-  console.log("str:", str)
-  console.log("root:", root)
   if (!operatorsMap.has(root)) {
     return {
       root,
@@ -230,14 +211,14 @@ function linearStringToTree(str: string): TreeNode {
     if (operatorsMap.get(root)[1] === 1) {
       return {
         root,
-        childLeft: linearStringToTree(left),
+        childLeft: linearStringToTree(right),
         childRight: null
       }
     } else if (operatorsMap.get(root)[1] === 2) {
       return {
         root,
-        childLeft: linearStringToTree(right),
-        childRight: linearStringToTree(left)
+        childLeft: linearStringToTree(left),
+        childRight: linearStringToTree(right)
       }
     }
   }
