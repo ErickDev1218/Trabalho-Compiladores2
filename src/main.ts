@@ -1,88 +1,58 @@
 import { graphviz } from "node-graphviz";
 import { Buffer } from "buffer";
 
-enum OPERATOR {
-  SUM, // SOMA
-  SUB, // SUBTRACAO
-  DIV, // DIVISAO
-  MUL, // MULTIPLICACAO
-  MEM, // LOAD
-  MEV, // MOVEM
-  MOV, // STORE
-  // OPP, // (
-  // CPP, // )
-}
-type Pattern = {
-  root: OPERATOR,
-  left?: TreeNode,
-  right?: TreeNode
-  operation: string,
-  expression: string
-}
-const i = 1
-const j = 2
-const k = 3
-const pattern: Pattern[] = [
-  {
-    root: OPERATOR.SUM,
-    left: null,
-    right: null,
-    operation: 'ADD',
-    expression: `r${i} <- r${j} + r${k}`
-  },
-  {
-    root: OPERATOR.MUL,
-    left: null,
-    right: null,
-    operation: 'MUL',
-    expression: `r${i} <- r${j} + r${k}`
-
-  },
-]
-const operatorsMap: Map<string, [OPERATOR, number]> = new Map<string, [OPERATOR, number]>([
-  ["+", [OPERATOR.SUM, 2]],
-  ["-", [OPERATOR.SUB, 2]],
-  ["/", [OPERATOR.DIV, 2]],
-  ["*", [OPERATOR.MUL, 2]],
-  ["MEV", [OPERATOR.MEV, 2]],
-  ["MEM", [OPERATOR.MEM, 1]],
-  ["MOV", [OPERATOR.MOV, 2]],
-  // ["(", [ OPERATOR.OPP, 0]],
-  // [")", [ OPERATOR.CPP, 0]],
-]);
+// const input = '+(CONST1,CONST2)'
+const input = 'PRIKITO(+(A,B),+(C,D))'
 
 type TreeNode = {
   root: string;
-  childLeft?: TreeNode;
-  childRight?: TreeNode;
+  parent?: TreeNode;
+  leftChild?: TreeNode;
+  rightChild?: TreeNode;
 };
 
-function splitLinearString(str: string): string[] {
-  const chars: string[] = str.split("");
-  const ret: string[] = [];
+function stringToTree(input : string) : TreeNode {
+  const root = {
+    root: "",
+    parent: null,
+    leftChild: null,
+    rightChild: null
+  } 
 
-  for (let i = 0; i < chars.length; i++) {
-    if (operatorsMap.has(chars[i])) {
-      ret.push(chars[i]);
-    } else {
-      let full_str = "";
-      while (i < chars.length - 1 && ![",", "(", ")"].includes(chars[i + 1])) {
-        if (chars[i] !== ",") {
-          full_str += chars[i];
+  let node = root
+
+  for(const char of input) {
+    switch(char) {
+      case '(':
+        node.leftChild = {
+          root: "",
+          parent: node,
+          leftChild: null,
+          rightChild: null
         }
-        i++;
-      }
-      if (chars[i] !== ",") {
-        full_str += chars[i];
-      }
-      if (full_str !== "") {
-        ret.push(full_str);
-      }
+        node = node.leftChild;
+        break
+      case ',':
+        node.parent.rightChild = {
+          root: "",
+          parent: node.parent,
+          leftChild: null,
+          rightChild: null
+        }
+        node = node.parent.rightChild
+        break;
+      case ')':
+        node = node.parent
+        break
+      default:
+        node.root += char 
+        break
     }
   }
 
-  return ret;
+  return root
 }
+
 async function generateGraphInBase64(graph): Promise<string> {
   return new Promise((resolve, reject) => {
     graph.output({ type: "svg" }, (imageData) => {
@@ -111,15 +81,15 @@ node[shape="box"]`
     const currId = idStack.pop()
     graphvizStr += `\n${currId}[label="${currNode.root}"]\n`
 
-    if (currNode.childLeft !== null) {
+    if (currNode.leftChild !== null) {
       globalId++
-      stack.push(currNode.childLeft)
+      stack.push(currNode.leftChild)
       idStack.push(globalId);
       graphvizStr += `${currId}--${globalId}\n`
     }
-    if (currNode.childRight !== null) {
+    if (currNode.rightChild !== null) {
       globalId++
-      stack.push(currNode.childRight)
+      stack.push(currNode.rightChild)
       idStack.push(globalId);
       graphvizStr += `${currId}--${globalId}\n`
     }
@@ -132,94 +102,18 @@ node[shape="box"]`
   return Buffer.from(svg).toString('base64');
 }
 
-function seeTree(tree: TreeNode) {
+function posOrdemPrint(tree: TreeNode) {
   if (tree === null) {
     return
   }
-  seeTree(tree.childLeft)
-  seeTree(tree.childRight)
+  posOrdemPrint(tree.leftChild)
+  posOrdemPrint(tree.rightChild)
   console.log(tree.root)
 }
+
 export async function generateLinearStringB64(linearString) {
-  const tree = linearStringToTree(linearString)
-  seeTree(tree)
+  const tree = stringToTree(linearString)
+  posOrdemPrint(tree)
   const ret = await ParseTreeToGraphvizB64(tree)
   return ret;
-}
-
-
-//Testando com recursão
-
-function rec(str: string) {
-  if (str.length === 0) {
-    return null
-  }
-  let _str = ''
-  let i = 0
-  while (!str.includes('(')) {
-    _str = str[i]
-  }
-  _str = _str.substring(0, _str.length - 1)
-  const final: TreeNode = {
-    root: _str,
-    childLeft: rec(_str),
-    childRight: rec(_str) //depois de remover até o proximo )
-  }
-}
-
-function linearStringToTree(str: string): TreeNode {
-  str = str.trim()
-  const root = str.substring(0, str.indexOf("(") === -1 ? str.length : str.indexOf("("))
-  if (!operatorsMap.has(root)) {
-    return {
-      root,
-      childLeft: null,
-      childRight: null
-    }
-  } else {
-    let flag = false;
-    let counter = 0;
-    let index = 0;
-    let left;
-    let right;
-
-    for (let i = 0; i < str.length; i++) {
-      if (str[i] === "(") {
-        counter++;
-        if (!flag) {
-          flag = true
-        }
-      }
-      if (str[i] === ")") {
-        counter--;
-        if (counter === 1) {
-          index = i;
-          break;
-        }
-      }
-    }
-
-    if (counter === 0) {
-      right = str.substring(str.indexOf("(") + 1, str.length - 1).split(",")[1]
-      left = str.substring(str.indexOf("(") + 1, str.length - 1).split(",")[0]
-    } else {
-      left = (str.substring(str.indexOf("(") + 1, index + 1))
-      let temp = str.substring(index + 1, str.length)
-      right = temp.substring(temp.indexOf(",") + 1, temp.length - 1)
-    }
-
-    if (operatorsMap.get(root)[1] === 1) {
-      return {
-        root,
-        childLeft: linearStringToTree(right),
-        childRight: null
-      }
-    } else if (operatorsMap.get(root)[1] === 2) {
-      return {
-        root,
-        childLeft: linearStringToTree(left),
-        childRight: linearStringToTree(right)
-      }
-    }
-  }
 }
