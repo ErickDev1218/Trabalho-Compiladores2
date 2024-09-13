@@ -1,22 +1,94 @@
 import { graphviz } from "node-graphviz";
 import { Buffer } from "buffer";
+import { group } from "console";
 
-// const input = '+(CONST1,CONST2)'
+
 const input = 'PRIKITO(+(A,B),+(C,D))'
 
 type TreeNode = {
   root: string;
-  parent?: TreeNode;
-  leftChild?: TreeNode;
-  rightChild?: TreeNode;
+  parent: TreeNode | null;
+  leftChild: TreeNode | null;
+  rightChild: TreeNode | null;
+  group: Number;
 };
+
+const patternsTrees : TreeNode[] = [
+  stringToTree("+"),
+  stringToTree("*"),
+  stringToTree("-"),
+  stringToTree("/"),
+  stringToTree("TEMP"),
+  stringToTree("CONST"),
+  stringToTree("+(CONST)"),
+  stringToTree("MEM"),
+  stringToTree("MEM(+(CONST))"),
+  stringToTree("MOVE(MEM(+(CONST)))"),
+  stringToTree("MOVE(MEM(CONST))"),
+  stringToTree("MOVE(MEM)"),
+  stringToTree("MOVE(MEM,MEM)"),
+  stringToTree("MOVE(MEM(+(CONST)))")
+]
+
+let t1 = stringToTree("+(CONST,CONST)");
+t1.leftChild = null;
+patternsTrees.push(t1)
+
+t1 = stringToTree("-(CONST,CONST)");
+t1.leftChild = null;
+patternsTrees.push(t1)
+
+t1 = stringToTree("MEM(+(CONST,CONST))");
+t1.leftChild.leftChild = null;
+patternsTrees.push(t1)
+
+
+
+function acceptsPatter(root : TreeNode, pattern : TreeNode) : boolean {
+  if(root === null){
+    return false;
+  }
+  const st_node = [root]
+  const st_patt = [pattern]
+
+  while(st_node.length !== 0 && st_patt.length !== 0) {
+    const curr_node = st_node.pop();
+    const curr_patt = st_patt.pop();
+
+    if(curr_node.root === curr_patt.root 
+      || (curr_patt.root === "CONST" && curr_node.root.startsWith("CONST"))
+      || (curr_patt.root === "TEMP" && curr_node.root.startsWith("TEMP"))
+    ) {
+      if(curr_node.leftChild === null && curr_patt.leftChild !== null) {
+        return false
+      }
+      if(curr_node.rightChild === null && curr_patt.rightChild !== null) {
+        return false
+      }
+
+      if(curr_node.leftChild !== null && curr_patt.leftChild !== null) {
+        st_node.push(curr_node.leftChild)
+        st_patt.push(curr_patt.leftChild)
+      }
+      if(curr_node.rightChild !== null && curr_patt.rightChild !== null) {
+        st_node.push(curr_node.rightChild)
+        st_patt.push(curr_patt.rightChild)
+      } 
+    } else {
+      return false;
+    }
+  }
+
+  return true
+}
 
 function stringToTree(input : string) : TreeNode {
   const root = {
     root: "",
     parent: null,
     leftChild: null,
-    rightChild: null
+    rightChild: null,
+    group: null
   } 
 
   let node = root
@@ -28,7 +100,8 @@ function stringToTree(input : string) : TreeNode {
           root: "",
           parent: node,
           leftChild: null,
-          rightChild: null
+          rightChild: null,
+          group: null
         }
         node = node.leftChild;
         break
@@ -37,7 +110,8 @@ function stringToTree(input : string) : TreeNode {
           root: "",
           parent: node.parent,
           leftChild: null,
-          rightChild: null
+          rightChild: null,
+          group: null
         }
         node = node.parent.rightChild
         break;
@@ -51,20 +125,6 @@ function stringToTree(input : string) : TreeNode {
   }
 
   return root
-}
-
-async function generateGraphInBase64(graph): Promise<string> {
-  return new Promise((resolve, reject) => {
-    graph.output({ type: "svg" }, (imageData) => {
-      if (imageData) {
-        // Convertendo para Base64
-        const base64Image = Buffer.from(imageData).toString("base64");
-        resolve(base64Image);
-      } else {
-        reject("Erro ao gerar o grafo.");
-      }
-    });
-  });
 }
 
 async function ParseTreeToGraphvizB64(tree: TreeNode) {
@@ -96,7 +156,7 @@ node[shape="box"]`
   }
 
   graphvizStr += "\n}"
-  // console.log(graphvizStr);
+  console.log(graphvizStr);
 
   const svg = await graphviz.dot(graphvizStr, 'svg')
   // Convert the SVG to Base64
