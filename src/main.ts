@@ -71,7 +71,7 @@ async function ParseTreeToGraphvizB64(tree: TreeNode) {
   let globalId = 0
   const stack: TreeNode[] = []
   const idStack: number[] = []
-  let graphvizStr = `graph {
+  let graphvizStr = `digraph {
 node[shape="box"]`
   stack.push(tree)
   idStack.push(globalId)
@@ -85,17 +85,18 @@ node[shape="box"]`
       globalId++
       stack.push(currNode.leftChild)
       idStack.push(globalId);
-      graphvizStr += `${currId}--${globalId}\n`
+      graphvizStr += `${currId}->${globalId}\n`
     }
     if (currNode.rightChild !== null) {
       globalId++
       stack.push(currNode.rightChild)
       idStack.push(globalId);
-      graphvizStr += `${currId}--${globalId}\n`
+      graphvizStr += `${currId}->${globalId}\n`
     }
   }
 
   graphvizStr += "\n}"
+  // console.log(graphvizStr);
 
   const svg = await graphviz.dot(graphvizStr, 'svg')
   // Convert the SVG to Base64
