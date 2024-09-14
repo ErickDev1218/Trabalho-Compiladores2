@@ -1,6 +1,7 @@
 const img = document.querySelector("#img");
 const btn = document.querySelector("#btn");
 const input = document.querySelector("#input");
+const costDiv = document.querySelector("#cost-div")
 
 console.log(img);
 console.log(input);
@@ -28,6 +29,7 @@ btn.addEventListener("click", async () => {
     const data = await response.json();
     // console.log("Success:", data);
     img.src = `data:image/svg+xml;base64,${data.img}`
+    costDiv.innerText = `Custo: ${data.cost}`
   } catch (error) {
     console.error("Error:", error);
   }

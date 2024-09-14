@@ -1,17 +1,7 @@
 import { graphviz } from "node-graphviz";
 import { Buffer } from "buffer";
-import { group } from "console";
-
-
-const input = 'PRIKITO(+(A,B),+(C,D))'
-
-type TreeNode = {
-  root: string;
-  parent: TreeNode | null;
-  leftChild: TreeNode | null;
-  rightChild: TreeNode | null;
-  group: Number;
-};
+import TreeNode from "./TreeNode.js";
+import { randomHexColor } from "./utils.js";
 
 const patternsTrees : TreeNode[] = [
   stringToTree("+"),
@@ -21,8 +11,11 @@ const patternsTrees : TreeNode[] = [
   stringToTree("TEMP"),
   stringToTree("CONST"),
   stringToTree("+(CONST)"),
+  stringToTree("+(,CONST)"),
+  stringToTree("-(,CONST)"),
   stringToTree("MEM"),
   stringToTree("MEM(+(CONST))"),
+  stringToTree("MEM(+(,CONST))"),
   stringToTree("MOVE(MEM(+(CONST)))"),
   stringToTree("MOVE(MEM(CONST))"),
   stringToTree("MOVE(MEM)"),
@@ -30,89 +23,63 @@ const patternsTrees : TreeNode[] = [
   stringToTree("MOVE(MEM(+(CONST)))")
 ]
 
-let t1 = stringToTree("+(CONST,CONST)");
-t1.leftChild = null;
-patternsTrees.push(t1)
+// const t1 = stringToTree("+(MEM(+(TEMP_FP,CONST_a)),*(TEMP_i,CONST_4))")
+// selectInstrunctions(t1)
+// console.log(t1)
+// console.log(t1.getCost())
+// ParseTreeToGraphvizB64(t1)
 
-t1 = stringToTree("-(CONST,CONST)");
-t1.leftChild = null;
-patternsTrees.push(t1)
+function selectInstrunctions(root : TreeNode) {
+  const stack1 : TreeNode[] = [root]
+  const stack2 : TreeNode[] = []
 
-t1 = stringToTree("MEM(+(CONST,CONST))");
-t1.leftChild.leftChild = null;
-patternsTrees.push(t1)
+  while(stack1.length > 0) {
+    const node = stack1.pop()
 
+    stack2.push(node)
 
-
-function acceptsPatter(root : TreeNode, pattern : TreeNode) : boolean {
-  if(root === null){
-    return false;
-  }
-  const st_node = [root]
-  const st_patt = [pattern]
-
-  while(st_node.length !== 0 && st_patt.length !== 0) {
-    const curr_node = st_node.pop();
-    const curr_patt = st_patt.pop();
-
-    if(curr_node.root === curr_patt.root 
-      || (curr_patt.root === "CONST" && curr_node.root.startsWith("CONST"))
-      || (curr_patt.root === "TEMP" && curr_node.root.startsWith("TEMP"))
-    ) {
-      if(curr_node.leftChild === null && curr_patt.leftChild !== null) {
-        return false
-      }
-      if(curr_node.rightChild === null && curr_patt.rightChild !== null) {
-        return false
-      }
-
-      if(curr_node.leftChild !== null && curr_patt.leftChild !== null) {
-        st_node.push(curr_node.leftChild)
-        st_patt.push(curr_patt.leftChild)
-      }
-      if(curr_node.rightChild !== null && curr_patt.rightChild !== null) {
-        st_node.push(curr_node.rightChild)
-        st_patt.push(curr_patt.rightChild)
-      } 
-    } else {
-      return false;
+    if(node.leftChild !== null) {
+      stack1.push(node.leftChild)
+    }
+    
+    if(node.rightChild !== null) {
+      stack1.push(node.rightChild)
     }
   }
 
-  return true
+  // Pós-ordem aqui
+  while(stack2.length > 0) {
+    const node = stack2.pop()
+
+    // Testar todos os patters para escolher o melhor
+    for(const pattern of patternsTrees) {
+      if(node.acceptsPatter(pattern)) {
+        const temp = node.clone()
+        temp.applyPatter(pattern)
+        // Se for melhor que atual, então aplicar o pattern
+        if(node.getCost() === null || temp.getCost() < node.getCost()) {
+          node.applyPatter(pattern)
+        }
+      }
+    }
+  }
 }
 
+
 function stringToTree(input : string) : TreeNode {
-  const root = {
-    root: "",
-    parent: null,
-    leftChild: null,
-    rightChild: null,
-    group: null
-  } 
+  const root = new TreeNode("")
 
   let node = root
 
-  for(const char of input) {
+  for(let i = 0; i < input.length; i++) {
+    const char = input[i]
     switch(char) {
       case '(':
-        node.leftChild = {
-          root: "",
-          parent: node,
-          leftChild: null,
-          rightChild: null,
-          group: null
-        }
+        node.leftChild = new TreeNode("", node)
         node = node.leftChild;
         break
       case ',':
-        node.parent.rightChild = {
-          root: "",
-          parent: node.parent,
-          leftChild: null,
-          rightChild: null,
-          group: null
-        }
+        node.parent.rightChild = new TreeNode("", node.parent)
         node = node.parent.rightChild
         break;
       case ')':
@@ -124,6 +91,8 @@ function stringToTree(input : string) : TreeNode {
     }
   }
 
+  root.clearEmptyNodes()
+
   return root
 }
 
@@ -131,7 +100,8 @@ async function ParseTreeToGraphvizB64(tree: TreeNode) {
   let globalId = 0
   const stack: TreeNode[] = []
   const idStack: number[] = []
-  let graphvizStr = `digraph {
+  const colorMap: Map<Number, string> = new Map<Number, string>()
+  let graphvizStr = `graph {
 node[shape="box"]`
   stack.push(tree)
   idStack.push(globalId)
@@ -139,42 +109,61 @@ node[shape="box"]`
   while (stack.length !== 0) {
     const currNode = stack.pop()
     const currId = idStack.pop()
-    graphvizStr += `\n${currId}[label="${currNode.root}"]\n`
+    if(currNode.group !== null) {
+      if(!colorMap.has(currNode.group)){
+        colorMap.set(currNode.group, randomHexColor())
+      }
+      graphvizStr += `\n${currId}[label="${currNode.root}",style="filled",fillcolor="${colorMap.get(currNode.group)}"]\n`
+    } else {
+      graphvizStr += `\n${currId}[label="${currNode.root}"]\n`
+    }
 
     if (currNode.leftChild !== null) {
       globalId++
       stack.push(currNode.leftChild)
       idStack.push(globalId);
-      graphvizStr += `${currId}->${globalId}\n`
+      graphvizStr += `${currId}--${globalId}\n`
+      // Adicionar nó fantasmas, isso ajuda a vizualizar que o nó a seguir é o esquerdo
+      // No caso do nó ser MEM isso não precisa ser feito
+      if(currNode.root !== "MEM" && currNode.rightChild === null) {
+        globalId++
+        graphvizStr += `\n${globalId}[style=invis]\n`
+        graphvizStr += `${currId}--${globalId}[style=invis]\n`
+      }
     }
     if (currNode.rightChild !== null) {
+      // Adicionar nó fantasmas, isso ajuda a vizualizar que o nó a seguir é o direito
+      if(currNode.root !== "MEM" && currNode.leftChild === null) {
+        globalId++
+        graphvizStr += `\n${globalId}[style=invis]\n`
+        graphvizStr += `${currId}--${globalId}[style=invis]\n`
+      }
       globalId++
       stack.push(currNode.rightChild)
       idStack.push(globalId);
-      graphvizStr += `${currId}->${globalId}\n`
+      graphvizStr += `${currId}--${globalId}\n`
     }
   }
 
   graphvizStr += "\n}"
-  console.log(graphvizStr);
+  // console.log(graphvizStr);
 
   const svg = await graphviz.dot(graphvizStr, 'svg')
   // Convert the SVG to Base64
   return Buffer.from(svg).toString('base64');
 }
 
-function posOrdemPrint(tree: TreeNode) {
-  if (tree === null) {
-    return
-  }
-  posOrdemPrint(tree.leftChild)
-  posOrdemPrint(tree.rightChild)
-  console.log(tree.root)
-}
-
 export async function generateLinearStringB64(linearString) {
   const tree = stringToTree(linearString)
-  posOrdemPrint(tree)
+  selectInstrunctions(tree)
+  // console.log(tree)
+  // tree.posOrdemPrint()
   const ret = await ParseTreeToGraphvizB64(tree)
   return ret;
+}
+
+export function getTreeCost(linearString) {
+  const tree = stringToTree(linearString)
+  selectInstrunctions(tree)
+  return tree.getCost();
 }
