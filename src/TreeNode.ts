@@ -41,8 +41,15 @@ export default class TreeNode {
       // ---
       // Se o nó é um lider então seu custo é contabilizado
       if(node.parent === null || node.parent.group !== node.group) {
-        if(node.root === "MOVEM") {
-          cost += 2;
+        if(node.root.toLocaleUpperCase() === "MOVE") {
+          // Caso movem onde o custo é 2
+          if(node.leftChild !== null && node.leftChild.root.toUpperCase() === "MEM"
+            && node.rightChild !== null && node.rightChild.root.toLocaleUpperCase() === "MEM"
+          ) {
+            cost += 2
+          } else {
+            cost += 1
+          }
         }
         // O primeiro TEMP que aparece vale 0
         else if(node.root.toUpperCase().startsWith("TEMP") && !firstTemp) {
