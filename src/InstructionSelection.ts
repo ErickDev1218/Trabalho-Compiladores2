@@ -9,7 +9,7 @@ type pattern = {
 const patterns : pattern[] = [
   {
     patternTree: stringToTree("TEMP"),
-    patternLabel: "-"
+    patternLabel: "-TEMP-"
   },
   {
     patternTree: stringToTree("+"),
@@ -95,14 +95,127 @@ const mapPatternLabelToTranslateFunc : Map<string, translateFunc> = new Map<stri
 Definir de forma manual as traduções dos padrões
 ---*/
 
-mapPatternLabelToTranslateFunc.set("pattern-0", (node) => {
-  return { left: node.root.substring(5), right: "" }
+mapPatternLabelToTranslateFunc.set("-TEMP-", (node) => {
+  return { left: `${node.root.substring(5)}`, right: "" }
 })
 
-mapPatternLabelToTranslateFunc.set("pattern-5", (node) => {
+mapPatternLabelToTranslateFunc.set("ADD", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `${node.leftChild.leftExp} + ${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("MUL", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `${node.leftChild.leftExp} * ${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("SUB", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `${node.leftChild.leftExp} - ${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("DIV", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `${node.leftChild.leftExp} / ${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("ADDI1", (node) => {
   return {
     "left": `r${++registerOffset}`,
     "right": `${node.leftChild.leftExp} + ${node.rightChild.root.substring(6)}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("ADDI2", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `${node.rightChild.leftExp} + ${node.leftChild.root.substring(6)}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("ADDI3", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `r0 + ${node.root.substring(6)}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("SUBI", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `${node.leftChild.leftExp} - ${node.rightChild.root.substring(6)}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("LOAD1", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `M[${node.leftChild.leftChild.leftExp} + ${node.leftChild.rightChild.root.substring(6)}]`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("LOAD2", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `M[${node.leftChild.rightChild.leftExp} + ${node.leftChild.leftChild.root.substring(6)}]`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("LOAD3", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `M[r0 + ${node.leftChild.root.substring(6)}]`
+  }
+})
+
+
+mapPatternLabelToTranslateFunc.set("LOAD4", (node) => {
+  return {
+    "left": `r${++registerOffset}`,
+    "right": `M[${node.leftChild.root.substring(5)} + 0]`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("STORE1", (node) => {
+  return {
+    "left": `M[${node.leftChild.leftChild.leftChild.leftExp} + ${node.leftChild.leftChild.rightChild.root.substring(6)}]`,
+    "right": `${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("STORE2", (node) => {
+  return {
+    "left": `M[${node.leftChild.leftChild.rightChild.leftExp} + ${node.leftChild.leftChild.leftChild.root.substring(6)}]`,
+    "right": `${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("STORE3", (node) => {
+  return {
+    "left": `M[r0 + ${node.leftChild.leftChild.root.substring(6)}]`,
+    "right": `${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("STORE4", (node) => {
+  return {
+    "left": `M[${node.leftChild.leftChild.leftExp} + 0}]`,
+    "right": `${node.rightChild.leftExp}`
+  }
+})
+
+mapPatternLabelToTranslateFunc.set("MOVEM", (node) => {
+  return {
+    "left": `M[${node.leftChild.leftChild.leftExp}]`,
+    "right": `M[${node.rightChild.leftChild.leftExp}]`
   }
 })
 
@@ -168,6 +281,9 @@ export function translateInstrunctions(root : TreeNode) : string[]{
     const node = stack2.pop()
     // Se o nó for um leder de instrção
     if(node.parent === null || node.parent.group !== node.group) {
+      if(!mapPatternLabelToTranslateFunc.has(node.patternLabel)){
+        throw new Error(`Tradução do patter -> {${node.patternLabel}} não existe`)
+      }
       const expLR = mapPatternLabelToTranslateFunc.get(node.patternLabel)(node)
       node.leftExp = expLR.left
       node.rightExp = expLR.right
@@ -181,6 +297,9 @@ export function translateInstrunctions(root : TreeNode) : string[]{
   return code
 }
 
-// const t1 = stringToTree("+(TEMP_fp,CONST_a)")
-// selectInstrunctions(t1)
-// console.log(translateInstrunctions(t1))
+const t1 = stringToTree("MOVE(MEM(CONST_a),MEM(CONST_b))")
+selectInstrunctions(t1)
+const code = translateInstrunctions(t1)
+for(const line of code) {
+  console.log(line)
+}
