@@ -180,7 +180,7 @@ mapPatternLabelToTranslateFunc.set("LOAD3", (node) => {
 mapPatternLabelToTranslateFunc.set("LOAD4", (node) => {
   return {
     "left": `r${++registerOffset}`,
-    "right": `M[${node.leftChild.root.substring(5)} + 0]`
+    "right": `M[${node.leftChild.leftExp} + 0]`
   }
 })
 
