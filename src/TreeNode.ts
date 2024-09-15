@@ -1,3 +1,6 @@
+import { graphviz } from "node-graphviz";
+import { randomHexColor } from "./Utils.js";
+
 // Used for get unique ids for groups
 let globalId = 0
 
@@ -7,6 +10,9 @@ export default class TreeNode {
   leftChild: TreeNode | null;
   rightChild: TreeNode | null;
   group: Number;
+  patternLabel : string | null;
+  leftExp : string | null;
+  rightExp : string | null;
 
   constructor(
     root,
@@ -20,6 +26,9 @@ export default class TreeNode {
     this.leftChild = leftChild;
     this.rightChild = rightChild;
     this.group = group;
+    this.patternLabel = null
+    this.leftExp = null
+    this.rightExp = null
   }
 
   getCost() : number | null {
@@ -104,6 +113,7 @@ export default class TreeNode {
 
       // Copy root
       node_clone.root = node_this.root;
+      node_clone.group = node_this.group;
 
       // Copy left child
       if (node_this.leftChild !== null) {
@@ -211,6 +221,7 @@ export default class TreeNode {
       const node_this = stack_this.pop()
       const node_patt = stack_patt.pop()
       node_this.group = groupId
+      node_this.patternLabel = null
       if(node_patt.leftChild !== null) {
         stack_this.push(node_this.leftChild)
         stack_patt.push(node_patt.leftChild)
@@ -221,4 +232,91 @@ export default class TreeNode {
       }
     }
   }
+}
+
+export function stringToTree(input : string) : TreeNode {
+  const root = new TreeNode("")
+
+  let node = root
+
+  for(let i = 0; i < input.length; i++) {
+    const char = input[i]
+    switch(char) {
+      case '(':
+        node.leftChild = new TreeNode("", node)
+        node = node.leftChild;
+        break
+      case ',':
+        node.parent.rightChild = new TreeNode("", node.parent)
+        node = node.parent.rightChild
+        break;
+      case ')':
+        node = node.parent
+        break
+      default:
+        node.root += char 
+        break
+    }
+  }
+
+  root.clearEmptyNodes()
+
+  return root
+}
+
+export async function ParseTreeToGraphvizB64(tree: TreeNode) {
+  let globalId = 0
+  const stack: TreeNode[] = []
+  const idStack: number[] = []
+  const colorMap: Map<Number, string> = new Map<Number, string>()
+  let graphvizStr = `graph {
+node[shape="box"]`
+  stack.push(tree)
+  idStack.push(globalId)
+
+  while (stack.length !== 0) {
+    const currNode = stack.pop()
+    const currId = idStack.pop()
+    if(currNode.group !== null) {
+      if(!colorMap.has(currNode.group)){
+        colorMap.set(currNode.group, randomHexColor())
+      }
+      graphvizStr += `\n${currId}[label="${currNode.root}",style="filled",fillcolor="${colorMap.get(currNode.group)}"]\n`
+    } else {
+      graphvizStr += `\n${currId}[label="${currNode.root}"]\n`
+    }
+
+    if (currNode.leftChild !== null) {
+      globalId++
+      stack.push(currNode.leftChild)
+      idStack.push(globalId);
+      graphvizStr += `${currId}--${globalId}\n`
+      // Adicionar nó fantasmas, isso ajuda a vizualizar que o nó a seguir é o esquerdo
+      // No caso do nó ser MEM isso não precisa ser feito
+      if(currNode.root !== "MEM" && currNode.rightChild === null) {
+        globalId++
+        graphvizStr += `\n${globalId}[style=invis]\n`
+        graphvizStr += `${currId}--${globalId}[style=invis]\n`
+      }
+    }
+    if (currNode.rightChild !== null) {
+      // Adicionar nó fantasmas, isso ajuda a vizualizar que o nó a seguir é o direito
+      if(currNode.root !== "MEM" && currNode.leftChild === null) {
+        globalId++
+        graphvizStr += `\n${globalId}[style=invis]\n`
+        graphvizStr += `${currId}--${globalId}[style=invis]\n`
+      }
+      globalId++
+      stack.push(currNode.rightChild)
+      idStack.push(globalId);
+      graphvizStr += `${currId}--${globalId}\n`
+    }
+  }
+
+  graphvizStr += "\n}"
+  // console.log(graphvizStr);
+
+  const svg = await graphviz.dot(graphvizStr, 'svg')
+  // Convert the SVG to Base64
+  return Buffer.from(svg).toString('base64');
 }
