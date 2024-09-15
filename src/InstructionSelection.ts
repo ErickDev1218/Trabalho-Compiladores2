@@ -207,7 +207,7 @@ mapPatternLabelToTranslateFunc.set("STORE3", (node) => {
 
 mapPatternLabelToTranslateFunc.set("STORE4", (node) => {
   return {
-    "left": `M[${node.leftChild.leftChild.leftExp} + 0}]`,
+    "left": `M[${node.leftChild.leftChild.leftExp} + 0]`,
     "right": `${node.rightChild.leftExp}`
   }
 })
@@ -295,11 +295,4 @@ export function translateInstrunctions(root : TreeNode) : string[]{
   }
 
   return code
-}
-
-const t1 = stringToTree("MOVE(MEM(CONST_a),MEM(CONST_b))")
-selectInstrunctions(t1)
-const code = translateInstrunctions(t1)
-for(const line of code) {
-  console.log(line)
 }
