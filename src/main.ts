@@ -23,7 +23,7 @@ export async function getTreeInfoFromLinearString(linearString : string) {
 export async function generateLinearStringB64(linearString) {
   const tree = stringToTree(linearString)
   selectInstrunctions(tree)
-  console.log(tree)
+  // console.log(tree)
   // tree.posOrdemPrint()
   const ret = await ParseTreeToGraphvizB64(tree)
   return ret;

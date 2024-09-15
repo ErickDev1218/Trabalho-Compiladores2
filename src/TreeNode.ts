@@ -151,7 +151,6 @@ export default class TreeNode {
 
     while (stack2.length > 0) {
       const node = stack2.pop();
-      // console.log(node.root)
     }
   }
   
