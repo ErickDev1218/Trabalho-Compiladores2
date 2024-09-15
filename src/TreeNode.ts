@@ -105,6 +105,7 @@ export default class TreeNode {
       // Copy root
       node_clone.root = node_this.root;
       node_clone.group = node_this.group;
+      node_clone.patternLabel = node_this.patternLabel;
 
       // Copy left child
       if (node_this.leftChild !== null) {

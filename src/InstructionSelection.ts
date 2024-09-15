@@ -246,6 +246,11 @@ export function selectInstrunctions(root : TreeNode) {
       if(node.acceptsPatter(pattern.patternTree)) {
         const temp = node.clone()
         temp.applyPatter(pattern.patternTree)
+        if(node.root === "-") {
+          console.log(pattern.patternLabel)
+          console.log(temp)
+          console.log(node)
+        }
         // Se for melhor que atual, então aplicar o pattern
         if(node.getCost() === null || (temp.getCost() !== null && temp.getCost() < node.getCost())) {
           node.applyPatter(pattern.patternTree)
@@ -296,3 +301,7 @@ export function translateInstrunctions(root : TreeNode) : string[]{
 
   return code
 }
+
+const tree = stringToTree("-(TEMP_FP,CONST_x)")
+selectInstrunctions(tree)
+console.log(tree.acceptsPatter(stringToTree("-(TEMP_FP,CONST_x)")))
