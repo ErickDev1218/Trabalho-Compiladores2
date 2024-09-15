@@ -247,7 +247,7 @@ export function selectInstrunctions(root : TreeNode) {
         const temp = node.clone()
         temp.applyPatter(pattern.patternTree)
         // Se for melhor que atual, então aplicar o pattern
-        if(node.getCost() === null || (temp.getCost() !== null && temp.getCost() <= node.getCost())) {
+        if(node.getCost() === null || (temp.getCost() !== null && temp.getCost() < node.getCost())) {
           node.applyPatter(pattern.patternTree)
           node.patternLabel = pattern.patternLabel
         }
