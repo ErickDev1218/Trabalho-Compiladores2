@@ -301,7 +301,3 @@ export function translateInstrunctions(root : TreeNode) : string[]{
 
   return code
 }
-
-const tree = stringToTree("-(TEMP_FP,CONST_x)")
-selectInstrunctions(tree)
-console.log(tree.acceptsPatter(stringToTree("-(TEMP_FP,CONST_x)")))
