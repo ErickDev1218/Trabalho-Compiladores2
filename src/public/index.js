@@ -1,10 +1,8 @@
 const img = document.querySelector("#img");
 const btn = document.querySelector("#btn");
 const input = document.querySelector("#input");
-
-console.log(img);
-console.log(input);
-console.log(btn);
+const costDiv = document.querySelector("#cost-div")
+const codeCard = document.querySelector("#code-card");
 
 btn.addEventListener("click", async () => {
   try {
@@ -27,7 +25,9 @@ btn.addEventListener("click", async () => {
 
     const data = await response.json();
     // console.log("Success:", data);
-    img.src = `data:image/svg+xml;base64,${data.img}`
+    img.src = `data:image/svg+xml;base64,${data.b64Tree}`
+    costDiv.innerText = `Custo: ${data.costTree}`
+    codeCard.innerText = data.codeTree.join("\n")
   } catch (error) {
     console.error("Error:", error);
   }

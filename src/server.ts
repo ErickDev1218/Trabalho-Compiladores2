@@ -1,6 +1,6 @@
 import express from 'express';
 import path from 'path';
-import { generateLinearStringB64 } from './main.js';
+import { generateLinearStringB64, getTranslateCode, getTreeCost, getTreeInfoFromLinearString } from './main.js';
 
 const app = express();
 const port = 3000;
@@ -20,9 +20,13 @@ app.get('/', (req, res) => {
 
 app.post('/linear-string-to-img', async (req, res) => {
     try {
-        const b64 = await generateLinearStringB64(req.body.linearString)
-        res.status(200).json({img: b64})
+        const treeInfo = await getTreeInfoFromLinearString(req.body.linearString);
+        // const b64 = await generateLinearStringB64(req.body.linearString)
+        // const cost = getTreeCost(req.body.linearString)
+        // const code = getTranslateCode(req.body.linearString)
+        res.status(200).json(treeInfo)
     } catch (error) {
+        console.log(error)
         res.status(500).json({error})
     }
 });

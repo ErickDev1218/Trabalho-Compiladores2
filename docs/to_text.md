@@ -1,0 +1,6 @@
+### Do edital
+MEM(+(MEM(+(TEMP_FP,CONST_a)),*(TEMP_i,CONST_4)))
+MEM(+(TEMP_FP,CONST_a))
+*(TEMP_i,CONST_4)
+MEM(+(TEMP_FP,CONST_x))
+MOVE(MEM(+(MEM(+(TEMP_FP,CONST_a)),*(TEMP_i,CONST_4))),MEM(+(TEMP_FP,CONST_x)))
