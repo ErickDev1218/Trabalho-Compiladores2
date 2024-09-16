@@ -1,48 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trabalho Compiladores 2</title>
     <script defer src="index.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <nav class="navbar navbar-light bg-light">
-        <div class="container-fluid">
-            <div class="navbar-header">
-                <h1 class="navbar-brand">Trabalho Compiladores 2</h1>
-            </div>
-        </div>
-    </nav>
-
-    <div class="row">
-        <div class="col-10">
+    <div class="mainContainer">
+        <div class="inputContainer">
+            <h1 class="mainTitle">
+                Trabalho Compiladores 2
+            </h1>
+            <h3>Seleção de instrução</h3>
             <input type="text" id="input" class="form-control" placeholder="Linear String">
+            
+            <button id="btn" class="button" on:click="img += 'a'">Gerar</button>
+            <h3>Instruções de uso:</h3>
+            <ul>
+                <li>Não é permitido o uso de espaços vazios antes, dentro ou depois da entrada.</li>
+                <li>Toda const deve ser escrita como CONST_{seuValor}.</li>
+                <li>Variável temp deve ser escrita como TEMP_{seuValor}.</li>
+            </ul>
+            <h3>Implementado por:</h3>
+            <ul>
+                <li>Antônio Erick Freitas Ferreira</li>
+                <li>Gustavo Gurgel Medeiros</li>
+                <li>Mário Martins Aragão</li>
+                <li>João Pedro Soares Matias</li>
+                <li>Iarley Natã Lopes Souza</li>
+            </ul>
+            <h1 id="badFormat">
+            </h1>
         </div>
-        <div class="col-1">
-            <button id="btn" class="btn btn-primary" on:click="img += 'a'">Generate</button>
-        </div>
-        <div class="col-1" id="cost-div">
-            custo: ?
-        </div>
-    </div>
-
-    <div class="container-fluid p-0 d-flex justify-content-center mt-5">
-        <div class="card">
-            <div class="card-body">
-                <img id="img" width="600px" class="full-page-img">
-            </div>
-        </div>
-    </div>
     
-    <div class="container-fluid p-0 d-flex justify-content-center mt-5">
-        <div class="card">
-            <div class="card-body">
-                <pre id="code-card" style="font-size: 3em;">
-                </pre>
-            </div>
+        <div id="dinamic">
+            <img id="img" class="full-page-img">
+            <ul id="code-card">
+            </ul>
+            <h3 id="cost-div"></h3>
+            
         </div>
     </div>
 
